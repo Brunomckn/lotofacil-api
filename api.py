@@ -2,33 +2,51 @@
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import pandas as pd
+import csv
+import os
 
 app = Flask(__name__)
 
-# 🔑 LIBERA CORS PARA QUALQUER ORIGEM (GitHub Pages, etc.)
+# 🔓 LIBERA CORS PARA QUALQUER SITE (GitHub Pages, etc.)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ==============================
-# CARREGAR RESULTADOS
+# CARREGAR RESULTADOS DA LOTOFÁCIL (CSV)
 # ==============================
 def carregar_resultados():
-    df = pd.read_excel("Lotofácil.xlsx")
-    df = df.dropna()
-
     resultados = []
 
-    for _, linha in df.iterrows():
-        dezenas = set()
-        for i in range(2, 17):  # colunas das dezenas
-            dezenas.add(int(linha[i]))
-        resultados.append(dezenas)
+    caminho = "resultados_lotofacil.csv"
 
+    if not os.path.exists(caminho):
+        print("❌ Arquivo CSV não encontrado:", caminho)
+        return resultados
+
+    with open(caminho, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+
+        for linha in reader:
+            dezenas = []
+
+            for chave, valor in linha.items():
+                if chave.lower().startswith("d"):
+                    try:
+                        dezenas.append(int(valor))
+                    except:
+                        pass
+
+            if len(dezenas) == 15:
+                resultados.append(set(dezenas))
+
+    print(f"✅ {len(resultados)} concursos carregados")
     return resultados
 
 
 RESULTADOS = carregar_resultados()
 
+# ==============================
+# ROTAS
+# ==============================
 
 @app.route("/", methods=["GET"])
 def home():
@@ -37,12 +55,12 @@ def home():
 
 @app.route("/conferir", methods=["POST", "OPTIONS"])
 def conferir():
+    # Resposta ao preflight (CORS)
     if request.method == "OPTIONS":
-        # Resposta correta para preflight
         response = jsonify({})
         response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        response.headers.add("Access-Control-Allow-Methods", "POST")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
         return response, 200
 
     dados = request.get_json()
@@ -50,17 +68,29 @@ def conferir():
     if not dados or "dezenas" not in dados:
         return jsonify({"erro": "Dados inválidos"}), 400
 
-    jogo = set(map(int, dados["dezenas"]))
+    try:
+        jogo = set(map(int, dados["dezenas"]))
+    except:
+        return jsonify({"erro": "Formato inválido"}), 400
 
-    contagem = {11: 0, 12: 0, 13: 0, 14: 0, 15: 0}
+    contagem = {
+        "11": 0,
+        "12": 0,
+        "13": 0,
+        "14": 0,
+        "15": 0
+    }
 
     for resultado in RESULTADOS:
         acertos = len(jogo & resultado)
         if acertos >= 11:
-            contagem[acertos] += 1
+            contagem[str(acertos)] += 1
 
     return jsonify(contagem)
 
 
+# ==============================
+# INICIAR SERVIDOR
+# ==============================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
