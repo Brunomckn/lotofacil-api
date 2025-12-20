@@ -5,7 +5,9 @@ from flask_cors import CORS
 import pandas as pd
 
 app = Flask(__name__)
-CORS(app)  # <<< ISSO LIBERA O SITE PARA ACESSAR A API
+
+# 🔑 LIBERA CORS PARA QUALQUER ORIGEM (GitHub Pages, etc.)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ==============================
 # CARREGAR RESULTADOS
@@ -28,13 +30,21 @@ def carregar_resultados():
 RESULTADOS = carregar_resultados()
 
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def home():
     return "API Lotofácil rodando corretamente"
 
 
-@app.route("/conferir", methods=["POST"])
+@app.route("/conferir", methods=["POST", "OPTIONS"])
 def conferir():
+    if request.method == "OPTIONS":
+        # Resposta correta para preflight
+        response = jsonify({})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "POST")
+        return response, 200
+
     dados = request.get_json()
 
     if not dados or "dezenas" not in dados:
