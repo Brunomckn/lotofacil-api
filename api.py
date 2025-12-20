@@ -7,7 +7,7 @@ import os
 
 app = Flask(__name__)
 
-# 🔓 LIBERA CORS PARA QUALQUER SITE (GitHub Pages, etc.)
+# 🔓 Libera acesso para qualquer site (GitHub Pages)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ==============================
@@ -15,7 +15,6 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # ==============================
 def carregar_resultados():
     resultados = []
-
     caminho = "resultados_lotofacil.csv"
 
     if not os.path.exists(caminho):
@@ -23,22 +22,24 @@ def carregar_resultados():
         return resultados
 
     with open(caminho, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
+        reader = csv.reader(f)
 
         for linha in reader:
             dezenas = []
 
-            for chave, valor in linha.items():
-                if chave.lower().startswith("d"):
-                    try:
-                        dezenas.append(int(valor))
-                    except:
-                        pass
+            for item in linha:
+                try:
+                    n = int(item)
+                    if 1 <= n <= 25:
+                        dezenas.append(n)
+                except:
+                    pass
 
+            # só considera linhas com 15 dezenas válidas
             if len(dezenas) == 15:
                 resultados.append(set(dezenas))
 
-    print(f"✅ {len(resultados)} concursos carregados")
+    print(f"✅ {len(resultados)} concursos carregados corretamente")
     return resultados
 
 
@@ -86,7 +87,10 @@ def conferir():
         if acertos >= 11:
             contagem[str(acertos)] += 1
 
-    return jsonify(contagem)
+    return jsonify({
+        "total_concursos": len(RESULTADOS),
+        "acertos": contagem
+    })
 
 
 # ==============================
