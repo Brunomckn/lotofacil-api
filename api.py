@@ -118,16 +118,28 @@ def historico_jogo():
 
     historico = []
 
-    for idx, resultado in enumerate(RESULTADOS):
+with open("resultados_lotofacil.csv", newline="", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+
+    for idx, linha in enumerate(reader):
+        dezenas = []
+        for i in range(1, 16):
+            dezenas.append(int(linha[f"Bola{i}"]))
+
+        resultado = set(dezenas)
         acertos = len(jogo & resultado)
 
         historico.append({
             "concurso": idx + 1,
             "acertos": acertos,
-            "dezenas_sorteadas": sorted(list(resultado))
+            "dezenas_sorteadas": dezenas,
+            "premios": {
+                "15": linha["Rateio 15 acertos"],
+                "14": linha["Rateio 14 acertos"],
+                "13": linha["Rateio 13 acertos"],
+                "12": linha["Rateio 12 acertos"],
+                "11": linha["Rateio 11 acertos"]
+            }
         })
 
-    return jsonify({
-        "total": len(historico),
-        "historico": historico
-    })
+
