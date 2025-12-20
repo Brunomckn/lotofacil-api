@@ -96,3 +96,38 @@ def conferir():
 # ==============================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
+@app.route("/historico_jogo", methods=["POST", "OPTIONS"])
+def historico_jogo():
+    if request.method == "OPTIONS":
+        response = jsonify({})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        return response, 200
+
+    dados = request.get_json()
+
+    if not dados or "dezenas" not in dados:
+        return jsonify({"erro": "Dados inválidos"}), 400
+
+    try:
+        jogo = set(map(int, dados["dezenas"]))
+    except:
+        return jsonify({"erro": "Formato inválido"}), 400
+
+    historico = []
+
+    for idx, resultado in enumerate(RESULTADOS):
+        acertos = len(jogo & resultado)
+
+        historico.append({
+            "concurso": idx + 1,
+            "acertos": acertos,
+            "dezenas_sorteadas": sorted(list(resultado))
+        })
+
+    return jsonify({
+        "total": len(historico),
+        "historico": historico
+    })
