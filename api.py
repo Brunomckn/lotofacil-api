@@ -7,35 +7,33 @@ import os
 
 app = Flask(__name__)
 
-# 🔓 Libera acesso para qualquer site (GitHub Pages)
+# 🔓 Libera acesso para qualquer origem (GitHub Pages)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ==============================
-# CARREGAR RESULTADOS DA LOTOFÁCIL (CSV)
+# CARREGAR RESULTADOS DA LOTOFÁCIL
 # ==============================
 def carregar_resultados():
     resultados = []
     caminho = "resultados_lotofacil.csv"
 
     if not os.path.exists(caminho):
-        print("❌ Arquivo CSV não encontrado:", caminho)
+        print("❌ CSV não encontrado:", caminho)
         return resultados
 
     with open(caminho, newline="", encoding="utf-8") as f:
-        reader = csv.reader(f)
+        reader = csv.DictReader(f)
 
         for linha in reader:
             dezenas = []
 
-            for item in linha:
+            for i in range(1, 16):
+                chave = f"Bola{i}"
                 try:
-                    n = int(item)
-                    if 1 <= n <= 25:
-                        dezenas.append(n)
+                    dezenas.append(int(linha[chave]))
                 except:
                     pass
 
-            # só considera linhas com 15 dezenas válidas
             if len(dezenas) == 15:
                 resultados.append(set(dezenas))
 
@@ -56,7 +54,7 @@ def home():
 
 @app.route("/conferir", methods=["POST", "OPTIONS"])
 def conferir():
-    # Resposta ao preflight (CORS)
+    # Preflight CORS
     if request.method == "OPTIONS":
         response = jsonify({})
         response.headers.add("Access-Control-Allow-Origin", "*")
