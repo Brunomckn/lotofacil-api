@@ -3,82 +3,60 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import csv
-import os
 
 app = Flask(__name__)
 
-# 🔓 Libera acesso para qualquer origem (GitHub Pages)
-CORS(app, resources={r"/*": {"origins": "*"}})
+# 🔓 CORS GLOBAL (ESSENCIAL NO RENDER)
+CORS(
+    app,
+    resources={r"/*": {"origins": "*"}},
+    supports_credentials=True
+)
+
+# 🔓 GARANTE HEADERS EM TODAS AS RESPOSTAS
+@app.after_request
+def after_request(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+    response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    return response
+
 
 # ==============================
-# CARREGAR RESULTADOS DA LOTOFÁCIL
+# CARREGAR RESULTADOS
 # ==============================
 def carregar_resultados():
     resultados = []
-    caminho = "resultados_lotofacil.csv"
 
-    if not os.path.exists(caminho):
-        print("❌ CSV não encontrado:", caminho)
-        return resultados
-
-    with open(caminho, newline="", encoding="utf-8") as f:
+    with open("resultados_lotofacil.csv", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-
         for linha in reader:
             dezenas = []
-
             for i in range(1, 16):
-                chave = f"Bola{i}"
-                try:
-                    dezenas.append(int(linha[chave]))
-                except:
-                    pass
+                dezenas.append(int(linha[f"Bola{i}"]))
+            resultados.append(set(dezenas))
 
-            if len(dezenas) == 15:
-                resultados.append(set(dezenas))
-
-    print(f"✅ {len(resultados)} concursos carregados corretamente")
     return resultados
 
 
 RESULTADOS = carregar_resultados()
 
+
 # ==============================
 # ROTAS
 # ==============================
-
 @app.route("/", methods=["GET"])
 def home():
     return "API Lotofácil rodando corretamente"
 
 
-@app.route("/conferir", methods=["POST", "OPTIONS"])
+@app.route("/conferir", methods=["POST"])
 def conferir():
-    # Preflight CORS
-    if request.method == "OPTIONS":
-        response = jsonify({})
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        return response, 200
-
     dados = request.get_json()
 
-    if not dados or "dezenas" not in dados:
-        return jsonify({"erro": "Dados inválidos"}), 400
+    jogo = set(map(int, dados["dezenas"]))
 
-    try:
-        jogo = set(map(int, dados["dezenas"]))
-    except:
-        return jsonify({"erro": "Formato inválido"}), 400
-
-    contagem = {
-        "11": 0,
-        "12": 0,
-        "13": 0,
-        "14": 0,
-        "15": 0
-    }
+    contagem = {"11": 0, "12": 0, "13": 0, "14": 0, "15": 0}
 
     for resultado in RESULTADOS:
         acertos = len(jogo & resultado)
@@ -91,31 +69,10 @@ def conferir():
     })
 
 
-# ==============================
-# INICIAR SERVIDOR
-# ==============================
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
-
-@app.route("/historico_jogo", methods=["POST", "OPTIONS"])
+@app.route("/historico_jogo", methods=["POST"])
 def historico_jogo():
-    if request.method == "OPTIONS":
-        response = jsonify({})
-        response.status_code = 200
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        return response
-
     dados = request.get_json()
-
-    if not dados or "dezenas" not in dados:
-        return jsonify({"erro": "Dados inválidos"}), 400
-
-    try:
-        jogo = set(map(int, dados["dezenas"]))
-    except:
-        return jsonify({"erro": "Formato inválido"}), 400
+    jogo = set(map(int, dados["dezenas"]))
 
     historico = []
 
@@ -149,4 +106,5 @@ def historico_jogo():
     })
 
 
-
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
