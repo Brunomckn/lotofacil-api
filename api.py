@@ -101,10 +101,11 @@ if __name__ == "__main__":
 def historico_jogo():
     if request.method == "OPTIONS":
         response = jsonify({})
+        response.status_code = 200
         response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Headers", "Content-Type")
         response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        return response, 200
+        return response
 
     dados = request.get_json()
 
@@ -118,28 +119,34 @@ def historico_jogo():
 
     historico = []
 
-with open("resultados_lotofacil.csv", newline="", encoding="utf-8") as f:
-    reader = csv.DictReader(f)
+    with open("resultados_lotofacil.csv", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
 
-    for idx, linha in enumerate(reader):
-        dezenas = []
-        for i in range(1, 16):
-            dezenas.append(int(linha[f"Bola{i}"]))
+        for idx, linha in enumerate(reader):
+            dezenas = []
+            for i in range(1, 16):
+                dezenas.append(int(linha[f"Bola{i}"]))
 
-        resultado = set(dezenas)
-        acertos = len(jogo & resultado)
+            resultado = set(dezenas)
+            acertos = len(jogo & resultado)
 
-        historico.append({
-            "concurso": idx + 1,
-            "acertos": acertos,
-            "dezenas_sorteadas": dezenas,
-            "premios": {
-                "15": linha["Rateio 15 acertos"],
-                "14": linha["Rateio 14 acertos"],
-                "13": linha["Rateio 13 acertos"],
-                "12": linha["Rateio 12 acertos"],
-                "11": linha["Rateio 11 acertos"]
-            }
-        })
+            historico.append({
+                "concurso": idx + 1,
+                "acertos": acertos,
+                "dezenas_sorteadas": dezenas,
+                "premios": {
+                    "15": linha["Rateio 15 acertos"],
+                    "14": linha["Rateio 14 acertos"],
+                    "13": linha["Rateio 13 acertos"],
+                    "12": linha["Rateio 12 acertos"],
+                    "11": linha["Rateio 11 acertos"]
+                }
+            })
+
+    return jsonify({
+        "total": len(historico),
+        "historico": historico
+    })
+
 
 
