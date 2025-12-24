@@ -6,21 +6,16 @@ import csv
 
 app = Flask(__name__)
 
-# 🔓 CORS GLOBAL (ESSENCIAL NO RENDER)
-CORS(
-    app,
-    resources={r"/*": {"origins": "*"}},
-    supports_credentials=True
-)
-
-# 🔓 GARANTE HEADERS EM TODAS AS RESPOSTAS
-@app.after_request
-def after_request(response):
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-    response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    return response
-
+# ==============================
+# CORS (CONFIGURAÇÃO ÚNICA E CORRETA)
+# ==============================
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "https://brunomckn.github.io"
+        ]
+    }
+})
 
 # ==============================
 # CARREGAR RESULTADOS
@@ -34,7 +29,9 @@ def carregar_resultados():
             dezenas = []
             for i in range(1, 16):
                 dezenas.append(int(linha[f"Bola{i}"]))
-            resultados.append(set(dezenas))
+            resultados.append({
+                "dezenas": dezenas
+            })
 
     return resultados
 
@@ -50,15 +47,20 @@ def home():
     return "API Lotofácil rodando corretamente"
 
 
+@app.route("/resultados", methods=["GET"])
+def resultados():
+    return jsonify(RESULTADOS)
+
+
 @app.route("/conferir", methods=["POST"])
 def conferir():
     dados = request.get_json()
-
     jogo = set(map(int, dados["dezenas"]))
 
     contagem = {"11": 0, "12": 0, "13": 0, "14": 0, "15": 0}
 
-    for resultado in RESULTADOS:
+    for r in RESULTADOS:
+        resultado = set(r["dezenas"])
         acertos = len(jogo & resultado)
         if acertos >= 11:
             contagem[str(acertos)] += 1
